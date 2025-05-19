@@ -70,15 +70,15 @@ def main():
                 if st.session_state.hidden[i, j]:
                     cell_value = st.session_state.user_grid[i, j]
                     if st.session_state.selected_cell == (i, j):
-                        # 드롭다운 표시
+                        # 드롭다운 표시 (문자열 리스트)
                         selected = st.selectbox(
                             "숫자 선택",
-                            options=[""] + list(range(1, 10)),
+                            options=[""] + [str(n) for n in range(1, 10)],
                             key=f"select_{i}_{j}",
                             index=0 if cell_value == 0 else cell_value,
                         )
-                        if selected != "" and selected != cell_value:
-                            st.session_state.user_grid[i, j] = selected
+                        if selected != "" and (cell_value == 0 or int(selected) != cell_value):
+                            st.session_state.user_grid[i, j] = int(selected)
                             st.session_state.selected_cell = None
                             st.experimental_rerun()
                     else:
