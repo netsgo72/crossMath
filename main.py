@@ -5,197 +5,132 @@ import random
 def initialize_grid():
     numbers = list(range(1, 10))
     random.shuffle(numbers)
-    grid = np.array(numbers).reshape(3, 3)
-    return grid
+    return np.array(numbers).reshape(3, 3)
 
 def hide_numbers(grid, max_visible=4):
     while True:
-        hidden_mask = np.ones_like(grid, dtype=bool)
-        positions = list(range(grid.size))
+        hidden = np.ones_like(grid, dtype=bool)
+        positions = list(range(9))
         random.shuffle(positions)
-        visible_count = 0
-        for pos in positions:
-            if visible_count < max_visible:
-                row, col = pos // 3, pos % 3
-                hidden_mask[row, col] = False
-                visible_count += 1
-            else:
-                break
-        valid_mask = True
+        for pos in positions[:max_visible]:
+            row, col = divmod(pos, 3)
+            hidden[row, col] = False
+        valid = True
         for i in range(3):
-            if np.sum(~hidden_mask[i, :]) == 3 or np.sum(~hidden_mask[:, i]) == 3:
-                valid_mask = False
+            if np.sum(~hidden[i, :]) == 3 or np.sum(~hidden[:, i]) == 3:
+                valid = False
                 break
-        if valid_mask:
-            return hidden_mask
+        if valid:
+            return hidden
 
 def main():
-    st.set_page_config(layout="wide")
+    st.set_page_config(layout="centered")
     st.title("숫자 채우기 게임")
 
+    # 스타일 적용
     st.markdown("""
     <style>
-    .grid-cell-wrapper .stButton>button {
-        width: 100px !important;
-        height: 100px !important;
-        font-size: 40px;
-        padding: 8px;
-        margin: 0px;
-        border: 1px solid #ccc;
-        box-sizing: border-box;
-        overflow: hidden;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        line-height: 1;
-    }
-
-    .grid-cell-wrapper.selected .stButton>button {
-        border: 3px solid RoyalBlue !important; 
-        background-color: AliceBlue !important;
-    }
-
-    .grid-cell-wrapper .stButton>button:disabled {
-        background-color: #f0f0f0; 
-        color: #555; 
-        border: 1px solid #d0d0d0; 
-    }
-
-    .number-panel-buttons-wrapper {
-        padding-top: 5px; 
-    }
-
-    .number-panel-buttons-wrapper .stButton[key*="panel_num_"]>button {
-        aspect-ratio: 1 / 1; 
-        font-size: 18px; 
-    }
-
-    .number-panel-buttons-wrapper .stButton[key*="panel_clear_btn"]>button {
-        font-size: 16px;
-        height: 40px; 
-        margin-top: 8px; 
+    .grid-button .stButton>button {
+        width: 100px;
+        height: 100px;
+        font-size: 32px;
+        padding: 0;
+        margin: 1px;
     }
 
     .sum-cell {
+        width: 100px;
+        height: 100px;
+        font-size: 20px;
+        font-weight: bold;
+        padding: 4px;
+        line-height: 1.2;
         display: flex;
         align-items: center;
         justify-content: center;
-        width: 100px !important;
-        height: 100px !important;
-        font-size: 40px;
-        font-weight: bold;
-        padding: 8px;
-        box-sizing: border-box;
+        text-align: center;
         border: 1px solid #ccc;
-        background-color: #f9f9f9;
-        margin: 0px;
+        box-sizing: border-box;
+        overflow-wrap: break-word;
+        overflow: hidden;
     }
     </style>
     """, unsafe_allow_html=True)
 
-    if 'grid' not in st.session_state:
+    # 상태 초기화
+    if "grid" not in st.session_state:
         st.session_state.grid = initialize_grid()
-        st.session_state.hidden_mask = hide_numbers(st.session_state.grid, max_visible=4)
-        st.session_state.user_grid = np.zeros_like(st.session_state.grid, dtype=int)
-    if 'selected_cell' not in st.session_state:
-        st.session_state.selected_cell = None
+        st.session_state.hidden = hide_numbers(st.session_state.grid)
+        st.session_state.user_grid = np.zeros((3, 3), dtype=int)
+        st.session_state.selected = None
+        st.session_state.pending = None
 
-    grid_area, panel_area = st.columns([3, 0.9]) 
+    # 선택된 셀에 값 반영
+    if st.session_state.selected and st.session_state.pending:
+        r, c = st.session_state.selected
+        st.session_state.user_grid[r, c] = st.session_state.pending
+        st.session_state.selected = None
+        st.session_state.pending = None
+        st.experimental_rerun()
 
-    with grid_area:
-        for i in range(3):
-            row_cols = st.columns(4, gap="small") 
-            for j in range(3):
-                with row_cols[j]: 
-                    is_hidden_cell = st.session_state.hidden_mask[i, j]
-                    actual_value = st.session_state.grid[i, j]
-                    user_value = st.session_state.user_grid[i, j]
-                    is_currently_selected = (st.session_state.selected_cell == (i,j))
-
-                    wrapper_class = "grid-cell-wrapper"
-                    if is_currently_selected and is_hidden_cell: 
-                        wrapper_class += " selected"
-                    
-                    st.markdown(f'<div class="{wrapper_class}">', unsafe_allow_html=True)
-                    
-                    if is_hidden_cell:
-                        display_label = str(user_value) if user_value != 0 else " "
-                        if st.button(display_label, key=f"btn_cell_{i}_{j}"): 
-                            if is_currently_selected:
-                                st.session_state.selected_cell = None 
-                            else:
-                                st.session_state.selected_cell = (i,j) 
-                            st.rerun()
+    # 3x3 셀 + 행 합계
+    for i in range(3):
+        cols = st.columns(4)
+        for j in range(3):
+            with cols[j]:
+                key = f"{i}_{j}"
+                st.markdown('<div class="grid-button">', unsafe_allow_html=True)
+                if st.session_state.hidden[i, j]:
+                    val = st.session_state.user_grid[i, j]
+                    if st.session_state.selected == (i, j):
+                        opt = st.selectbox(
+                            "선택",
+                            options=[""] + [str(n) for n in range(1, 10)],
+                            index=val if val else 0,
+                            key=f"sel_{key}"
+                        )
+                        if opt != "":
+                            st.session_state.pending = int(opt)
+                            st.experimental_rerun()
                     else:
-                        st.button(str(actual_value), key=f"btn_cell_{i}_{j}", disabled=True)
-                    
-                    st.markdown('</div>', unsafe_allow_html=True)
-            
-            with row_cols[3]: 
-                row_sum = np.sum(st.session_state.grid[i, :])
-                st.markdown(f'<div class="sum-cell" title="행 {i+1} 합계">합계: {row_sum}</div>', unsafe_allow_html=True)
+                        label = str(val) if val else ""
+                        if st.button(label, key=f"btn_{key}"):
+                            st.session_state.selected = (i, j)
+                else:
+                    st.button(str(st.session_state.grid[i, j]), key=f"btn_vis_{key}", disabled=True)
+                st.markdown('</div>', unsafe_allow_html=True)
+        with cols[3]:
+            row_sum = np.sum(st.session_state.grid[i])
+            st.markdown(f'<div class="sum-cell">합계: {row_sum}</div>', unsafe_allow_html=True)
 
-        st.markdown('<div style="margin-top: 5px;"></div>', unsafe_allow_html=True) 
-        sum_display_cols = st.columns(4, gap="small")
-        for j_sum_col in range(3): 
-            with sum_display_cols[j_sum_col]:
-                col_sum = np.sum(st.session_state.grid[:, j_sum_col])
-                st.markdown(f'<div class="sum-cell" title="열 {j_sum_col+1} 합계">합계: {col_sum}</div>', unsafe_allow_html=True)
-        with sum_display_cols[3]: 
-            main_diag_sum = np.trace(st.session_state.grid)
-            st.markdown(f'<div class="sum-cell" title="대각선 합계 (좌상-우하)">↘ 합계: {main_diag_sum}</div>', unsafe_allow_html=True)
+    # 열 합계 + 대각선
+    col_sums = st.columns(4)
+    for j in range(3):
+        with col_sums[j]:
+            col_sum = np.sum(st.session_state.grid[:, j])
+            st.markdown(f'<div class="sum-cell">합계: {col_sum}</div>', unsafe_allow_html=True)
+    with col_sums[3]:
+        diag_sum = np.trace(st.session_state.grid)
+        st.markdown(f'<div class="sum-cell">↘ 합계: {diag_sum}</div>', unsafe_allow_html=True)
 
-    with panel_area:
-        st.subheader("숫자판")
-        st.markdown('<div class="number-panel-buttons-wrapper">', unsafe_allow_html=True)
-        
-        for r_panel in range(3):
-            panel_row_cols = st.columns(3, gap="small") 
-            for c_panel in range(3):
-                num_val_panel = r_panel * 3 + c_panel + 1
-                with panel_row_cols[c_panel]:
-                    if st.button(str(num_val_panel), key=f"panel_num_{num_val_panel}", use_container_width=True):
-                        if st.session_state.selected_cell:
-                            r, c = st.session_state.selected_cell
-                            if st.session_state.hidden_mask[r,c]: 
-                                st.session_state.user_grid[r,c] = num_val_panel
-                                st.rerun()
-        
-        if st.button("지우기", key="panel_clear_btn", use_container_width=True):
-            if st.session_state.selected_cell:
-                r, c = st.session_state.selected_cell
-                if st.session_state.hidden_mask[r,c]: 
-                    st.session_state.user_grid[r,c] = 0 
-                    st.rerun()
-        st.markdown('</div>', unsafe_allow_html=True)
-
-    st.markdown("---") 
-    col1, col2 = st.columns(2)
-    with col1:
-        if st.button("정답 확인", use_container_width=True):
-            all_correct = True
-            is_empty_exists = False
-            for r_idx in range(3):
-                for c_idx in range(3):
-                    if st.session_state.hidden_mask[r_idx, c_idx]: 
-                        if st.session_state.user_grid[r_idx, c_idx] == 0: 
-                            is_empty_exists = True
-                        if st.session_state.user_grid[r_idx, c_idx] != st.session_state.grid[r_idx, c_idx]:
-                            all_correct = False
-            
-            if not all_correct:
-                st.error("일부 숫자가 정답과 다릅니다. 다시 확인해주세요!")
-            elif is_empty_exists and all_correct : 
-                 st.warning("모든 빈칸을 채워주세요! 현재까지 입력한 값은 정답입니다.")
-            else: 
-                 st.success("축하합니다! 모든 숫자를 정확히 맞혔습니다!")
-    with col2:
-        if st.button("새 게임 시작", use_container_width=True):
-            keys_to_reset = ['grid', 'hidden_mask', 'user_grid', 'selected_cell']
-            for key in keys_to_reset:
-                if key in st.session_state:
-                    del st.session_state[key]
-            st.rerun()
+    # 버튼들
+    col_btns = st.columns(2)
+    with col_btns[0]:
+        if st.button("정답 확인"):
+            correct = all(
+                not st.session_state.hidden[i, j] or
+                st.session_state.user_grid[i, j] == st.session_state.grid[i, j]
+                for i in range(3) for j in range(3)
+            )
+            if correct:
+                st.success("정답입니다!")
+            else:
+                st.error("틀린 숫자가 있습니다.")
+    with col_btns[1]:
+        if st.button("새 게임 시작"):
+            for key in ["grid", "hidden", "user_grid", "selected", "pending"]:
+                st.session_state.pop(key, None)
+            st.experimental_rerun()
 
 if __name__ == "__main__":
     main()
