@@ -34,24 +34,22 @@ def main():
     st.set_page_config(page_title="숫자 채우기 게임", layout="wide")
     st.title("🔢 숫자 채우기 게임")
 
-    # CSS 스타일 정의
     st.markdown("""
         <style>
-        /* Style for puzzle grid buttons */
-        .puzzle-area .stButton>button {
+        /* Default style for puzzle grid buttons */
+        .stButton>button {
             width: 100px;
             height: 100px;
-            font-size: 96px;  /* MODIFIED: 3x previous 32px, now specifically for puzzle grid */
+            font-size: 96px;  /* MODIFIED: 3x previous 32px */
             margin: 1px;
             padding: 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            line-height: 1;
-            overflow: hidden;
+            display: flex;         /* For centering content */
+            align-items: center;   /* Vertical centering */
+            justify-content: center;/* Horizontal centering */
+            line-height: 1;        /* Improved text fitting */
+            overflow: hidden;      /* Prevent text spill for very large font */
             border-width: 2px !important; /* Ensuring border is visible */
         }
-
         .sum-cell {
             display: flex;
             align-items: center;
@@ -64,7 +62,6 @@ def main():
             box-sizing: border-box;
             border: 1px solid #ccc; /* Adding a border for sum cells for clarity */
         }
-
         /* Specific style for keypad buttons */
         .keypad-container .stButton>button {
             width: 50px;
@@ -72,25 +69,16 @@ def main():
             font-size: 16px;
             margin: 1px;
             padding: 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            display: flex;         /* For centering content */
+            align-items: center;   /* Vertical centering */
+            justify-content: center;/* Horizontal centering */
             line-height: 1;
         }
         
-        /* For reducing gap between columns in the puzzle area */
+        /* MODIFIED: For reducing gap between columns in the puzzle area */
         .puzzle-area .stHorizontalBlock {
             gap: 0px !important; /* Reduces Streamlit column gap. Visual gap will be button margins (1px+1px=2px). */
         }
-
-        /* Optional: Define a default style for other st.button elements if needed */
-        /* For example, "정답 확인" and "새 게임 시작" buttons. */
-        /* If not specified, they will use Streamlit's default styling. */
-        /*
-        .stButton>button {
-            font-size: 16px; // Example size for general buttons
-        }
-        */
         </style>
     """, unsafe_allow_html=True)
 
@@ -105,7 +93,7 @@ def main():
 
     with left_col:
         st.markdown("### 퍼즐")
-        st.markdown('<div class="puzzle-area">', unsafe_allow_html=True) # puzzle-area div 시작
+        st.markdown('<div class="puzzle-area">', unsafe_allow_html=True)
 
         for i in range(3): 
             cols = st.columns(4) 
@@ -117,18 +105,15 @@ def main():
 
                     if is_hidden:
                         display_val = str(user_val) if user_val != 0 else " "
-                        button_key = f"cell_{i}_{j}"
-                        button_text = display_val
-                        
-                        # 선택된 셀에 대한 시각적 강조 (예: 테두리 색 변경)
-                        # Streamlit 버튼 자체의 스타일을 직접 바꾸긴 어려우므로, 텍스트나 다른 방식을 고려
+                        # Use a slightly different visual cue for selected cell if needed
                         if st.session_state.selected_cell == (i, j):
-                            button_text = f"[{display_val}]" # 간단한 텍스트 기반 표시
-                        
-                        if st.button(button_text, key=button_key):
-                            st.session_state.selected_cell = (i, j)
-                            st.rerun()
-                            return 
+                            # This button is primarily for display of selection, not interaction
+                            st.button(f"[{display_val}]", key=f"selected_{i}_{j}_indicator", help="선택된 셀")
+                        else:
+                            if st.button(display_val, key=f"hidden_{i}_{j}"):
+                                st.session_state.selected_cell = (i, j)
+                                st.rerun()
+                                return 
                     else: 
                         st.button(str(actual_val), key=f"visible_{i}_{j}", disabled=True)
             
@@ -144,11 +129,11 @@ def main():
         with sum_cols_display[3]: 
             st.write("") 
 
-        st.markdown('</div>', unsafe_allow_html=True) # puzzle-area div 끝
+        st.markdown('</div>', unsafe_allow_html=True)
 
     with right_col:
         st.markdown("### 숫자 입력")
-        st.markdown('<div class="keypad-container">', unsafe_allow_html=True) # keypad-container div 시작
+        st.markdown('<div class="keypad-container">', unsafe_allow_html=True)
         
         keypad_layout_rows = [st.columns(3) for _ in range(3)]
         current_num = 1
@@ -160,11 +145,11 @@ def main():
                         if not is_disabled:
                             r_selected, c_selected = st.session_state.selected_cell
                             st.session_state.user_grid[r_selected, c_selected] = current_num
-                            st.session_state.selected_cell = None # 입력 후 선택 해제
+                            st.session_state.selected_cell = None
                             st.rerun()
                             return
-                    current_num += 1
-        st.markdown('</div>', unsafe_allow_html=True) # keypad-container div 끝
+                current_num += 1
+        st.markdown('</div>', unsafe_allow_html=True)
 
     st.markdown("---")
 
@@ -189,7 +174,7 @@ def main():
                             num_empty_hidden_cells += 1
             
             if not any_hidden_cell_exists:
-                st.info("💡 모든 숫자가 이미 공개되어 있습니다!")
+                 st.info("💡 모든 숫자가 이미 공개되어 있습니다!")
             elif num_incorrectly_filled_hidden_cells > 0:
                 st.error("❌ 일부 숫자가 정답과 다릅니다. 다시 확인해주세요!")
             elif num_empty_hidden_cells > 0 : 
