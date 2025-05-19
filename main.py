@@ -31,7 +31,7 @@ def hide_numbers(grid, max_visible=4):
             return hidden_mask
 
 def main():
-    st.set_page_config(page_title="숫자 채우기 게임", layout="centered")
+    st.set_page_config(page_title="숫자 채우기 게임", layout="wide")
     st.title("🔢 숫자 채우기 게임")
 
     st.markdown("""
@@ -64,55 +64,59 @@ def main():
     if 'selected_cell' not in st.session_state:
         st.session_state.selected_cell = None
 
-    st.markdown("### 퍼즐")
+    # 화면을 좌우 두 영역으로 분할
+    left_col, right_col = st.columns([2, 1])  # 퍼즐:2, 키패드:1 비율
 
-    for i in range(3):
-        cols = st.columns(4)
-        for j in range(3):
-            with cols[j]:
-                is_hidden = st.session_state.hidden_mask[i, j]
-                actual_val = st.session_state.grid[i, j]
-                user_val = st.session_state.user_grid[i, j]
+    with left_col:
+        st.markdown("### 퍼즐")
 
-                if is_hidden:
-                    display = str(user_val) if user_val != 0 else " "
-                    if st.session_state.selected_cell == (i, j):
-                        st.button(f"[{display}]", key=f"selected_{i}_{j}")
+        for i in range(3):
+            cols = st.columns(4)
+            for j in range(3):
+                with cols[j]:
+                    is_hidden = st.session_state.hidden_mask[i, j]
+                    actual_val = st.session_state.grid[i, j]
+                    user_val = st.session_state.user_grid[i, j]
+
+                    if is_hidden:
+                        display = str(user_val) if user_val != 0 else " "
+                        if st.session_state.selected_cell == (i, j):
+                            st.button(f"[{display}]", key=f"selected_{i}_{j}")
+                        else:
+                            if st.button(display, key=f"hidden_{i}_{j}"):
+                                st.session_state.selected_cell = (i, j)
+                                st.rerun()
+                                return
                     else:
-                        if st.button(display, key=f"hidden_{i}_{j}"):
-                            st.session_state.selected_cell = (i, j)
+                        st.button(str(actual_val), key=f"visible_{i}_{j}", disabled=True)
+
+            with cols[3]:
+                st.markdown(f'<div class="sum-cell">합계: {np.sum(st.session_state.grid[i, :])}</div>', unsafe_allow_html=True)
+
+        st.markdown('<div style="margin-top: 10px;"></div>', unsafe_allow_html=True)
+        sum_cols = st.columns(4)
+        for j in range(3):
+            with sum_cols[j]:
+                st.markdown(f'<div class="sum-cell">합계: {np.sum(st.session_state.grid[:, j])}</div>', unsafe_allow_html=True)
+        with sum_cols[3]:
+            st.write("")
+
+    with right_col:
+        st.markdown("### 숫자 입력")
+
+        keypad_rows = [st.columns(3) for _ in range(3)]
+        num = 1
+        for row in keypad_rows:
+            for col in row:
+                with col:
+                    if st.session_state.selected_cell is not None:
+                        if st.button(str(num), key=f"keypad_{num}"):
+                            r, c = st.session_state.selected_cell
+                            st.session_state.user_grid[r, c] = num
+                            st.session_state.selected_cell = None
                             st.rerun()
                             return
-                else:
-                    st.button(str(actual_val), key=f"visible_{i}_{j}", disabled=True)
-
-        with cols[3]:
-            st.markdown(f'<div class="sum-cell">합계: {np.sum(st.session_state.grid[i, :])}</div>', unsafe_allow_html=True)
-
-    st.markdown('<div style="margin-top: 10px;"></div>', unsafe_allow_html=True)
-    sum_cols = st.columns(4)
-    for j in range(3):
-        with sum_cols[j]:
-            st.markdown(f'<div class="sum-cell">합계: {np.sum(st.session_state.grid[:, j])}</div>', unsafe_allow_html=True)
-    with sum_cols[3]:
-        st.write("")
-
-    st.markdown("---")
-
-    st.markdown("### 숫자 입력")
-    keypad_rows = [st.columns(3) for _ in range(3)]
-    num = 1
-    for row in keypad_rows:
-        for col in row:
-            with col:
-                if st.session_state.selected_cell is not None:
-                    if st.button(str(num), key=f"keypad_{num}"):
-                        r, c = st.session_state.selected_cell
-                        st.session_state.user_grid[r, c] = num
-                        st.session_state.selected_cell = None
-                        st.rerun()
-                        return
-            num += 1
+                num += 1
 
     st.markdown("---")
     col1, col2 = st.columns(2)
