@@ -41,15 +41,15 @@ def main():
             width: 100px;
             height: 100px;
             font-size: 96px;
-            margin: 0px;  /* MODIFIED: Set to 0px to minimize gap */
-            padding: 0px; /* Ensure no internal padding affects spacing */
+            margin: 0px;
+            padding: 0px;
             display: flex;
             align-items: center;
             justify-content: center;
             line-height: 1;
             overflow: hidden;
-            border-width: 2px !important; /* Kept existing border */
-            box-sizing: border-box; /* ADDED: Ensures width/height include border and padding */
+            border-width: 2px !important;
+            box-sizing: border-box;
         }
         .sum-cell {
             display: flex;
@@ -60,27 +60,31 @@ def main():
             font-size: 22px;
             font-weight: bold;
             padding: 8px;
-            box-sizing: border-box; /* Already border-box */
+            box-sizing: border-box;
             border: 1px solid #ccc;
-            margin: 0px; /* Ensure sum cells also have no margin if they are part of tight layout */
+            margin: 0px;
         }
         /* Specific style for keypad buttons */
         .keypad-container .stButton>button {
             width: 50px;
             height: 50px;
             font-size: 16px;
-            margin: 1px; /* Keypad button margin can remain as is, or set to 0 if desired */
+            margin: 1px;
             padding: 0;
             display: flex;
             align-items: center;
             justify-content: center;
             line-height: 1;
-            box-sizing: border-box; /* Good practice for keypad buttons too */
+            box-sizing: border-box;
         }
-        
-        /* For reducing gap between columns in the puzzle area */
+        /* Minimize gap between columns in the puzzle area */
         .puzzle-area .stHorizontalBlock {
-            gap: 0px !important; /* Streamlit column gap set to 0 */
+            gap: 0px !important;
+        }
+        /* Ensure no additional spacing in puzzle area */
+        .puzzle-area {
+            margin: 0;
+            padding: 0;
         }
         </style>
     """, unsafe_allow_html=True)
@@ -99,7 +103,7 @@ def main():
         st.markdown('<div class="puzzle-area">', unsafe_allow_html=True)
 
         for i in range(3): 
-            cols = st.columns(4) 
+            cols = st.columns(4, gap="small")  # Use small gap as fallback, overridden by CSS
             for j in range(3): 
                 with cols[j]:
                     is_hidden = st.session_state.hidden_mask[i, j]
@@ -109,7 +113,6 @@ def main():
                     if is_hidden:
                         display_val = str(user_val) if user_val != 0 else " "
                         if st.session_state.selected_cell == (i, j):
-                            # MODIFIED: Disabled this button as it's an indicator
                             st.button(f"[{display_val}]", key=f"selected_{i}_{j}_indicator", help="선택된 셀", disabled=True)
                         else:
                             if st.button(display_val, key=f"hidden_{i}_{j}"):
@@ -122,15 +125,14 @@ def main():
             with cols[3]: 
                 st.markdown(f'<div class="sum-cell">합계: {np.sum(st.session_state.grid[i, :])}</div>', unsafe_allow_html=True)
 
-        # This explicit spacer creates a 10px vertical gap. Remove or set to 0 if sums should also touch grid.
-        st.markdown('<div style="margin-top: 0px;"></div>', unsafe_allow_html=True) # MODIFIED for tighter packing
+        st.markdown('<div style="margin-top: 0px;"></div>', unsafe_allow_html=True)
 
-        sum_cols_display = st.columns(4) 
+        sum_cols_display = st.columns(4, gap="small")  # Use small gap as fallback, overridden by CSS
         for j in range(3):
             with sum_cols_display[j]:
                 st.markdown(f'<div class="sum-cell">합계: {np.sum(st.session_state.grid[:, j])}</div>', unsafe_allow_html=True)
         with sum_cols_display[3]: 
-            st.markdown('<div class="sum-cell" style="visibility: hidden;"></div>', unsafe_allow_html=True) # Placeholder for alignment
+            st.markdown('<div class="sum-cell" style="visibility: hidden;"></div>', unsafe_allow_html=True)
 
         st.markdown('</div>', unsafe_allow_html=True)
 
