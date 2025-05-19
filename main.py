@@ -9,15 +9,26 @@ def initialize_grid():
     return grid
 
 def hide_numbers(grid, max_visible=4):
-    # 9칸 중 max_visible개만 보이도록 나머지는 숨김
-    hidden = np.ones_like(grid, dtype=bool)
-    positions = list(range(grid.size))
-    random.shuffle(positions)
-    for pos in positions[:max_visible]:
-        row = pos // 3
-        col = pos % 3
-        hidden[row, col] = False
-    return hidden
+    # 9칸 중 max_visible개만 보이도록, 한 행/열에 3개 모두 보이는 경우가 없도록 숨김
+    while True:
+        hidden = np.ones_like(grid, dtype=bool)
+        positions = list(range(grid.size))
+        random.shuffle(positions)
+        for pos in positions[:max_visible]:
+            row = pos // 3
+            col = pos % 3
+            hidden[row, col] = False
+        # 각 행/열에 3개 모두 보이는 경우가 없는지 확인
+        valid = True
+        for i in range(3):
+            if np.sum(~hidden[i, :]) == 3:  # 행
+                valid = False
+                break
+            if np.sum(~hidden[:, i]) == 3:  # 열
+                valid = False
+                break
+        if valid:
+            return hidden
 
 def main():
     st.title("숫자 그리드")
@@ -46,16 +57,18 @@ def main():
         st.session_state.user_grid = np.zeros_like(st.session_state.grid)
     if 'selected_cell' not in st.session_state:
         st.session_state.selected_cell = None
-
-    # 드롭다운에서 값이 선택된 경우, 그 값을 반영
     if 'pending_value' not in st.session_state:
         st.session_state.pending_value = None
+
+    rerun_flag = False
+
+    # 드롭다운에서 값이 선택된 경우, 그 값을 반영
     if st.session_state.pending_value is not None and st.session_state.selected_cell is not None:
         i, j = st.session_state.selected_cell
         st.session_state.user_grid[i, j] = st.session_state.pending_value
         st.session_state.selected_cell = None
         st.session_state.pending_value = None
-        st.experimental_rerun()
+        rerun_flag = True
 
     # 3x3 그리드와 합계 표시
     for i in range(3):
@@ -74,10 +87,12 @@ def main():
                         )
                         if selected != "" and (cell_value == 0 or int(selected) != cell_value):
                             st.session_state.pending_value = int(selected)
+                            rerun_flag = True
                     else:
                         label = "" if cell_value == 0 else str(cell_value)
                         if st.button(label, key=f"btn_{i}_{j}"):
                             st.session_state.selected_cell = (i, j)
+                            rerun_flag = True
                 else:
                     st.button(str(st.session_state.grid[i, j]), key=f"btn_visible_{i}_{j}", disabled=True)
         with cols[3]:
@@ -107,6 +122,10 @@ def main():
         st.session_state.user_grid = np.zeros_like(st.session_state.grid)
         st.session_state.selected_cell = None
         st.session_state.pending_value = None
+        rerun_flag = True
+
+    # rerun은 마지막에 한 번만!
+    if rerun_flag:
         st.experimental_rerun()
 
 if __name__ == "__main__":
