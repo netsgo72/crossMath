@@ -3,37 +3,25 @@ import numpy as np
 import random
 
 def initialize_grid():
-    # 3x3 그리드에 1-9 사이의 랜덤 숫자 생성
     numbers = list(range(1, 10))
     random.shuffle(numbers)
     grid = np.array(numbers).reshape(3, 3)
     return grid
 
-def calculate_sums(grid):
-    row_sums = np.sum(grid, axis=1)
-    col_sums = np.sum(grid, axis=0)
-    return row_sums, col_sums
-
-def hide_numbers(grid, difficulty=0.5):
-    # difficulty에 따라 숨길 숫자의 개수 결정 (0.5 = 절반의 숫자를 숨김)
-    hidden = np.zeros_like(grid, dtype=bool)
-    total_cells = grid.size
-    num_to_hide = int(total_cells * difficulty)
-    
-    # 랜덤하게 숨길 위치 선택
-    positions = list(range(total_cells))
+def hide_numbers(grid, max_visible=4):
+    # 9칸 중 max_visible개만 보이도록 나머지는 숨김
+    hidden = np.ones_like(grid, dtype=bool)
+    positions = list(range(grid.size))
     random.shuffle(positions)
-    for pos in positions[:num_to_hide]:
+    for pos in positions[:max_visible]:
         row = pos // 3
         col = pos % 3
-        hidden[row, col] = True
-    
+        hidden[row, col] = False
     return hidden
 
 def main():
-    st.title("초등학생 덧셈 연습 게임")
-    
-    # CSS 스타일 추가 (셀 크기 4배, 근접)
+    st.title("숫자 그리드")
+
     st.markdown("""
         <style>
         .stButton>button {
@@ -50,19 +38,26 @@ def main():
         }
         </style>
     """, unsafe_allow_html=True)
-    
+
     # 세션 상태 안전 초기화
     if 'grid' not in st.session_state:
         st.session_state.grid = initialize_grid()
-        st.session_state.hidden = hide_numbers(st.session_state.grid)
+        st.session_state.hidden = hide_numbers(st.session_state.grid, max_visible=4)
         st.session_state.user_grid = np.zeros_like(st.session_state.grid)
     if 'selected_cell' not in st.session_state:
         st.session_state.selected_cell = None
-    
-    # 그리드 표시
-    st.write("### 숫자 그리드")
-    
-    # 3x3 그리드와 합계를 표시하는 테이블 생성
+
+    # 드롭다운에서 값이 선택된 경우, 그 값을 반영
+    if 'pending_value' not in st.session_state:
+        st.session_state.pending_value = None
+    if st.session_state.pending_value is not None and st.session_state.selected_cell is not None:
+        i, j = st.session_state.selected_cell
+        st.session_state.user_grid[i, j] = st.session_state.pending_value
+        st.session_state.selected_cell = None
+        st.session_state.pending_value = None
+        st.experimental_rerun()
+
+    # 3x3 그리드와 합계 표시
     for i in range(3):
         cols = st.columns(4, gap="small")
         for j in range(3):
@@ -78,29 +73,21 @@ def main():
                             index=0 if cell_value == 0 else cell_value,
                         )
                         if selected != "" and (cell_value == 0 or int(selected) != cell_value):
-                            st.session_state.user_grid[i, j] = int(selected)
-                            st.session_state.selected_cell = None
-                            st.experimental_rerun()
+                            st.session_state.pending_value = int(selected)
                     else:
-                        # 빈 버튼 또는 입력된 숫자 버튼
                         label = "" if cell_value == 0 else str(cell_value)
                         if st.button(label, key=f"btn_{i}_{j}"):
                             st.session_state.selected_cell = (i, j)
                 else:
-                    # 보이는 숫자
                     st.button(str(st.session_state.grid[i, j]), key=f"btn_visible_{i}_{j}", disabled=True)
-        
-        # 행의 합계
         with cols[3]:
             st.markdown(f'<div class="sum-cell">합계: {np.sum(st.session_state.grid[i])}</div>', unsafe_allow_html=True)
-    
-    # 열의 합계 표시
+
     col_sums = st.columns(4, gap="small")
     for j in range(3):
         with col_sums[j]:
             st.markdown(f'<div class="sum-cell">합계: {np.sum(st.session_state.grid[:, j])}</div>', unsafe_allow_html=True)
-    
-    # 정답 확인
+
     if st.button("정답 확인"):
         correct = True
         for i in range(3):
@@ -109,19 +96,18 @@ def main():
                     if st.session_state.user_grid[i, j] != st.session_state.grid[i, j]:
                         correct = False
                         break
-        
         if correct:
             st.success("축하합니다! 모든 답이 맞았습니다!")
         else:
             st.error("아직 몇 개의 답이 틀렸습니다. 다시 시도해보세요!")
-    
-    # 새 게임 시작
+
     if st.button("새 게임 시작"):
         st.session_state.grid = initialize_grid()
-        st.session_state.hidden = hide_numbers(st.session_state.grid)
+        st.session_state.hidden = hide_numbers(st.session_state.grid, max_visible=4)
         st.session_state.user_grid = np.zeros_like(st.session_state.grid)
         st.session_state.selected_cell = None
+        st.session_state.pending_value = None
         st.experimental_rerun()
 
 if __name__ == "__main__":
-    main() 
+    main()
