@@ -36,11 +36,11 @@ def main():
 
     st.markdown("""
         <style>
-        /* Default style for puzzle grid buttons */
+        /* Puzzle grid buttons */
         .stButton>button {
             width: 100px;
             height: 100px;
-            font-size: 96px;
+            font-size: 120px; /* Increased from 96px to ~3x perceived size */
             margin: 0px;
             padding: 0px;
             display: flex;
@@ -64,35 +64,37 @@ def main():
             border: 1px solid #ccc;
             margin: 0px;
         }
-        /* Specific style for keypad buttons */
+        /* Keypad buttons */
         .keypad-container .stButton>button {
-            width: 50px;
-            height: 50px;
-            font-size: 16px;
-            margin: 1px;
-            padding: 0;
+            width: 80px; /* Elongated horizontally */
+            height: 40px; /* Shorter vertically */
+            font-size: 18px; /* Slightly larger for clarity */
+            margin: 0px; /* No gaps */
+            padding: 0px;
             display: flex;
             align-items: center;
             justify-content: center;
             line-height: 1;
             box-sizing: border-box;
         }
-        /* Minimize gap between columns in the puzzle area */
-        .puzzle-area .stHorizontalBlock, .puzzle-area [class*="st-"] {
+        /* Zero gaps in puzzle grid */
+        .puzzle-area .stHorizontalBlock, .puzzle-area [class*="st-"], .puzzle-area [class*="col-"] {
             gap: 0px !important;
             margin: 0px !important;
             padding: 0px !important;
         }
-        /* Ensure puzzle area and its children have no extra spacing */
         .puzzle-area, .puzzle-area > div {
             margin: 0px !important;
             padding: 0px !important;
-            display: flex;
-            flex-wrap: wrap;
             gap: 0px !important;
         }
-        /* Target Streamlit column containers directly */
-        .puzzle-area [class*="col-"], .puzzle-area [class*="stColumn"] {
+        /* Zero gaps in keypad */
+        .keypad-container .stHorizontalBlock, .keypad-container [class*="st-"], .keypad-container [class*="col-"] {
+            gap: 0px !important;
+            margin: 0px !important;
+            padding: 0px !important;
+        }
+        .keypad-container, .keypad-container > div {
             margin: 0px !important;
             padding: 0px !important;
             gap: 0px !important;
@@ -114,10 +116,12 @@ def main():
         st.markdown('<div class="puzzle-area">', unsafe_allow_html=True)
 
         for i in range(3):
-            # Use inline style as fallback for zero gap
+            # Inline style to reinforce zero gap
+            st.markdown('<div style="display: flex; gap: 0px; margin: 0px; padding: 0px;">', unsafe_allow_html=True)
             cols = st.columns(4, gap="small")
             for j in range(3):
                 with cols[j]:
+                    st.markdown('<div style="margin: 0px; padding: 0px;">', unsafe_allow_html=True)
                     is_hidden = st.session_state.hidden_mask[i, j]
                     actual_val = st.session_state.grid[i, j]
                     user_val = st.session_state.user_grid[i, j]
@@ -133,9 +137,10 @@ def main():
                                 return
                     else:
                         st.button(str(actual_val), key=f"visible_{i}_{j}", disabled=True)
-
+                    st.markdown('</div>', unsafe_allow_html=True)
             with cols[3]:
                 st.markdown(f'<div class="sum-cell">합계: {np.sum(st.session_state.grid[i, :])}</div>', unsafe_allow_html=True)
+            st.markdown('</div>', unsafe_allow_html=True)
 
         st.markdown('<div style="margin-top: 0px;"></div>', unsafe_allow_html=True)
 
@@ -152,11 +157,13 @@ def main():
         st.markdown("### 숫자 입력")
         st.markdown('<div class="keypad-container">', unsafe_allow_html=True)
 
-        keypad_layout_rows = [st.columns(3) for _ in range(3)]
+        keypad_layout_rows = [st.columns(3, gap="small") for _ in range(3)]
         current_num = 1
         for row_of_cols in keypad_layout_rows:
+            st.markdown('<div style="display: flex; gap: 0px; margin: 0px; padding: 0px;">', unsafe_allow_html=True)
             for col_object in row_of_cols:
                 with col_object:
+                    st.markdown('<div style="margin: 0px; padding: 0px;">', unsafe_allow_html=True)
                     is_disabled = st.session_state.selected_cell is None
                     if st.button(str(current_num), key=f"keypad_{current_num}", disabled=is_disabled):
                         if not is_disabled:
@@ -165,7 +172,9 @@ def main():
                             st.session_state.selected_cell = None
                             st.rerun()
                             return
+                    st.markdown('</div>', unsafe_allow_html=True)
                 current_num += 1
+            st.markdown('</div>', unsafe_allow_html=True)
         st.markdown('</div>', unsafe_allow_html=True)
 
     st.markdown("---")
