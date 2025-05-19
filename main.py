@@ -24,7 +24,7 @@ def hide_numbers(grid, max_visible=4):
 
         valid_mask = True
         for i in range(3):
-            if np.sum(~hidden_mask[i, :]) == 3 or np.sum(~hidden_mask[:, i]) == 3: # Check if any row or column is fully visible
+            if np.sum(~hidden_mask[i, :]) == 3 or np.sum(~hidden_mask[:, i]) == 3: 
                 valid_mask = False
                 break
         if valid_mask:
@@ -40,9 +40,15 @@ def main():
         .stButton>button {
             width: 100px;
             height: 100px;
-            font-size: 32px;
+            font-size: 96px;  /* MODIFIED: 3x previous 32px */
             margin: 1px;
             padding: 0;
+            display: flex;         /* For centering content */
+            align-items: center;   /* Vertical centering */
+            justify-content: center;/* Horizontal centering */
+            line-height: 1;        /* Improved text fitting */
+            overflow: hidden;      /* Prevent text spill for very large font */
+            border-width: 2px !important; /* Ensuring border is visible */
         }
         .sum-cell {
             display: flex;
@@ -54,14 +60,24 @@ def main():
             font-weight: bold;
             padding: 8px;
             box-sizing: border-box;
+            border: 1px solid #ccc; /* Adding a border for sum cells for clarity */
         }
         /* Specific style for keypad buttons */
         .keypad-container .stButton>button {
-            width: 50px;  /* Half of original 100px */
-            height: 50px; /* Half of original 100px */
-            font-size: 16px; /* Adjusted font size for 50px buttons */
+            width: 50px;
+            height: 50px;
+            font-size: 16px;
             margin: 1px;
             padding: 0;
+            display: flex;         /* For centering content */
+            align-items: center;   /* Vertical centering */
+            justify-content: center;/* Horizontal centering */
+            line-height: 1;
+        }
+        
+        /* MODIFIED: For reducing gap between columns in the puzzle area */
+        .puzzle-area .stHorizontalBlock {
+            gap: 0px !important; /* Reduces Streamlit column gap. Visual gap will be button margins (1px+1px=2px). */
         }
         </style>
     """, unsafe_allow_html=True)
@@ -73,39 +89,47 @@ def main():
     if 'selected_cell' not in st.session_state:
         st.session_state.selected_cell = None
 
-    left_col, right_col = st.columns([2, 1])
+    left_col, right_col = st.columns([2, 1]) 
 
     with left_col:
         st.markdown("### 퍼즐")
-        for i in range(3):
-            cols = st.columns(4)
-            for j in range(3):
+        st.markdown('<div class="puzzle-area">', unsafe_allow_html=True)
+
+        for i in range(3): 
+            cols = st.columns(4) 
+            for j in range(3): 
                 with cols[j]:
                     is_hidden = st.session_state.hidden_mask[i, j]
                     actual_val = st.session_state.grid[i, j]
                     user_val = st.session_state.user_grid[i, j]
 
                     if is_hidden:
-                        display = str(user_val) if user_val != 0 else " "
+                        display_val = str(user_val) if user_val != 0 else " "
+                        # Use a slightly different visual cue for selected cell if needed
                         if st.session_state.selected_cell == (i, j):
-                            st.button(f"[{display}]", key=f"selected_{i}_{j}_display") # Changed key for clarity
+                            # This button is primarily for display of selection, not interaction
+                            st.button(f"[{display_val}]", key=f"selected_{i}_{j}_indicator", help="선택된 셀")
                         else:
-                            if st.button(display, key=f"hidden_{i}_{j}"):
+                            if st.button(display_val, key=f"hidden_{i}_{j}"):
                                 st.session_state.selected_cell = (i, j)
                                 st.rerun()
                                 return 
-                    else:
+                    else: 
                         st.button(str(actual_val), key=f"visible_{i}_{j}", disabled=True)
-            with cols[3]:
+            
+            with cols[3]: 
                 st.markdown(f'<div class="sum-cell">합계: {np.sum(st.session_state.grid[i, :])}</div>', unsafe_allow_html=True)
 
-        st.markdown('<div style="margin-top: 10px;"></div>', unsafe_allow_html=True)
-        sum_cols = st.columns(4)
+        st.markdown('<div style="margin-top: 10px;"></div>', unsafe_allow_html=True) 
+
+        sum_cols_display = st.columns(4) 
         for j in range(3):
-            with sum_cols[j]:
+            with sum_cols_display[j]:
                 st.markdown(f'<div class="sum-cell">합계: {np.sum(st.session_state.grid[:, j])}</div>', unsafe_allow_html=True)
-        with sum_cols[3]:
-            st.write("")
+        with sum_cols_display[3]: 
+            st.write("") 
+
+        st.markdown('</div>', unsafe_allow_html=True)
 
     with right_col:
         st.markdown("### 숫자 입력")
@@ -116,42 +140,40 @@ def main():
         for row_of_cols in keypad_layout_rows:
             for col_object in row_of_cols:
                 with col_object:
-                    # Keypad buttons are always rendered. Disabled if no cell is selected.
                     is_disabled = st.session_state.selected_cell is None
                     if st.button(str(current_num), key=f"keypad_{current_num}", disabled=is_disabled):
-                        if not is_disabled: # Action only if button was enabled
+                        if not is_disabled:
                             r_selected, c_selected = st.session_state.selected_cell
                             st.session_state.user_grid[r_selected, c_selected] = current_num
-                            st.session_state.selected_cell = None # Deselect cell after input
+                            st.session_state.selected_cell = None
                             st.rerun()
                             return
                 current_num += 1
         st.markdown('</div>', unsafe_allow_html=True)
 
     st.markdown("---")
-    col1, col2 = st.columns(2)
 
-    with col1:
+    col1_action, col2_action = st.columns(2)
+    with col1_action:
         if st.button("정답 확인", use_container_width=True):
             num_incorrectly_filled_hidden_cells = 0
             num_empty_hidden_cells = 0
-            
-            any_hidden_cell_exists = False # To check if there are any cells to fill
+            any_hidden_cell_exists = False
 
             for r_idx in range(3):
                 for c_idx in range(3):
-                    if st.session_state.hidden_mask[r_idx, c_idx]: # If it's a hidden cell
+                    if st.session_state.hidden_mask[r_idx, c_idx]: 
                         any_hidden_cell_exists = True
                         user_value = st.session_state.user_grid[r_idx, c_idx]
                         actual_value = st.session_state.grid[r_idx, c_idx]
 
-                        if user_value != 0: # If user has input a number
+                        if user_value != 0: 
                             if user_value != actual_value:
                                 num_incorrectly_filled_hidden_cells += 1
-                        else: # User input is 0 (empty)
+                        else: 
                             num_empty_hidden_cells += 1
             
-            if not any_hidden_cell_exists: # Should not happen in this game setup, but good for robustness
+            if not any_hidden_cell_exists:
                  st.info("💡 모든 숫자가 이미 공개되어 있습니다!")
             elif num_incorrectly_filled_hidden_cells > 0:
                 st.error("❌ 일부 숫자가 정답과 다릅니다. 다시 확인해주세요!")
@@ -160,11 +182,11 @@ def main():
             else: 
                 st.success("🎉 축하합니다! 모든 숫자를 정확히 맞혔습니다!")
 
-    with col2:
+    with col2_action:
         if st.button("새 게임 시작", use_container_width=True):
-            for key in ['grid', 'hidden_mask', 'user_grid', 'selected_cell']:
-                if key in st.session_state:
-                    del st.session_state[key]
+            for key_to_clear in ['grid', 'hidden_mask', 'user_grid', 'selected_cell']:
+                if key_to_clear in st.session_state:
+                    del st.session_state[key_to_clear]
             st.rerun()
 
 if __name__ == "__main__":
