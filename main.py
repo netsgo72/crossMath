@@ -33,29 +33,30 @@ def hide_numbers(grid, difficulty=0.5):
 def main():
     st.title("초등학생 덧셈 연습 게임")
     
-    # CSS 스타일 추가
+    # CSS 스타일 추가 (셀 크기 4배, 근접)
     st.markdown("""
         <style>
         .stButton>button {
             width: 100px;
             height: 100px;
-            font-size: 24px;
-            margin: 2px;
+            font-size: 32px;
+            margin: 1px;
             padding: 0;
         }
         .sum-cell {
-            font-size: 20px;
+            font-size: 22px;
             font-weight: bold;
-            padding: 10px;
+            padding: 8px;
         }
         </style>
     """, unsafe_allow_html=True)
     
-    # 세션 상태 초기화
+    # 세션 상태 안전 초기화
     if 'grid' not in st.session_state:
         st.session_state.grid = initialize_grid()
         st.session_state.hidden = hide_numbers(st.session_state.grid)
         st.session_state.user_grid = np.zeros_like(st.session_state.grid)
+    if 'selected_cell' not in st.session_state:
         st.session_state.selected_cell = None
     
     # 그리드 표시
@@ -63,16 +64,27 @@ def main():
     
     # 3x3 그리드와 합계를 표시하는 테이블 생성
     for i in range(3):
-        cols = st.columns(4)  # 3개의 숫자 + 1개의 합계
+        cols = st.columns(4, gap="small")
         for j in range(3):
             with cols[j]:
                 if st.session_state.hidden[i, j]:
-                    # 숨겨진 숫자 위치
-                    if st.session_state.user_grid[i, j] == 0:
-                        if st.button("□", key=f"btn_{i}_{j}"):
-                            st.session_state.selected_cell = (i, j)
+                    cell_value = st.session_state.user_grid[i, j]
+                    if st.session_state.selected_cell == (i, j):
+                        # 드롭다운 표시
+                        selected = st.selectbox(
+                            "숫자 선택",
+                            options=[""] + list(range(1, 10)),
+                            key=f"select_{i}_{j}",
+                            index=0 if cell_value == 0 else cell_value,
+                        )
+                        if selected != "" and selected != cell_value:
+                            st.session_state.user_grid[i, j] = selected
+                            st.session_state.selected_cell = None
+                            st.experimental_rerun()
                     else:
-                        if st.button(str(st.session_state.user_grid[i, j]), key=f"btn_{i}_{j}"):
+                        # 빈 버튼 또는 입력된 숫자 버튼
+                        label = "" if cell_value == 0 else str(cell_value)
+                        if st.button(label, key=f"btn_{i}_{j}"):
                             st.session_state.selected_cell = (i, j)
                 else:
                     # 보이는 숫자
@@ -83,22 +95,10 @@ def main():
             st.markdown(f'<div class="sum-cell">합계: {np.sum(st.session_state.grid[i])}</div>', unsafe_allow_html=True)
     
     # 열의 합계 표시
-    col_sums = st.columns(4)
+    col_sums = st.columns(4, gap="small")
     for j in range(3):
         with col_sums[j]:
             st.markdown(f'<div class="sum-cell">합계: {np.sum(st.session_state.grid[:, j])}</div>', unsafe_allow_html=True)
-    
-    # 숫자 선택 패널
-    if st.session_state.selected_cell is not None:
-        st.write("### 숫자 선택")
-        num_cols = st.columns(3)
-        for num in range(1, 10):
-            with num_cols[(num-1) % 3]:
-                if st.button(str(num), key=f"num_{num}"):
-                    i, j = st.session_state.selected_cell
-                    st.session_state.user_grid[i, j] = num
-                    st.session_state.selected_cell = None
-                    st.experimental_rerun()
     
     # 정답 확인
     if st.button("정답 확인"):
