@@ -48,14 +48,14 @@ def main():
 
     st.markdown("""
         <style>
-        /* 그리드 셀 버튼 (사용자 참조 코드 스타일 기반) */
+        /* 그리드 셀 버튼 (크기 및 폰트 조정) */
         .grid-cell-wrapper .stButton>button {
-            width: 100px;
-            height: 100px;
-            font-size: 32px; /* 참조 코드 기준 폰트 크기 */
+            width: 100px;  /* 너비 100px 유지 */
+            height: 100px; /* 높이 100px 유지 */
+            font-size: 50px; /* 폰트 크기를 키워 숫자 가시성 향상 (기존 32px -> 50px) */
             padding: 0;
-            margin: 0px;
-            border: 1px solid #ccc; /* 참조 코드 기준 테두리 */
+            margin: 1px; /* 새 참조 코드 기준 마진 적용 */
+            border: 1px solid #ccc; 
             overflow: hidden; 
             display: flex; 
             align-items: center; 
@@ -73,29 +73,28 @@ def main():
         .grid-cell-wrapper .stButton>button:disabled {
             background-color: #f0f0f0; 
             color: #555; 
-            /* 비활성화 시 테두리는 기본 1px #ccc 유지 또는 #d0d0d0로 변경 가능 */
             border: 1px solid #d0d0d0; 
         }
 
-        /* 숫자 패널 버튼들을 감싸는 div */
+        /* 숫자 패널 버튼들을 감싸는 div (변경 없음) */
         .number-panel-buttons-wrapper {
             padding-top: 5px; 
         }
         
-        /* 숫자 패널의 1-9 숫자 버튼 (이전 기능 유지) */
+        /* 숫자 패널의 1-9 숫자 버튼 (변경 없음) */
         .number-panel-buttons-wrapper .stButton[key*="panel_num_"]>button {
             aspect-ratio: 1 / 1; 
             font-size: 18px; 
         }
         
-        /* 숫자 패널의 "지우기" 버튼 (이전 기능 유지) */
+        /* 숫자 패널의 "지우기" 버튼 (변경 없음) */
         .number-panel-buttons-wrapper .stButton[key*="panel_clear_btn"]>button {
             font-size: 16px;
             height: 40px; 
             margin-top: 8px; 
         }
 
-        /* 합계 셀 스타일 (이전 기능 유지) */
+        /* 합계 셀 스타일 (변경 없음) */
         .sum-cell {
             display: flex;
             align-items: center;
@@ -121,7 +120,7 @@ def main():
         st.session_state.selected_cell = None
 
     # 메인 레이아웃: 좌측 그리드 영역 | 우측 숫자 패널
-    grid_area, panel_area = st.columns([3, 0.9]) # 이전 비율 유지
+    grid_area, panel_area = st.columns([3, 0.9]) 
 
     with grid_area:
         # 3x3 그리드와 각 행의 합계 표시
@@ -135,38 +134,35 @@ def main():
                     is_currently_selected = (st.session_state.selected_cell == (i,j))
 
                     wrapper_class = "grid-cell-wrapper"
-                    if is_currently_selected and is_hidden_cell: # 수정 가능한 셀이 선택된 경우에만 selected 클래스 적용
+                    if is_currently_selected and is_hidden_cell: 
                         wrapper_class += " selected"
                     
                     st.markdown(f'<div class="{wrapper_class}">', unsafe_allow_html=True)
                     
                     if is_hidden_cell:
                         display_label = str(user_value) if user_value != 0 else " "
-                        # use_container_width=True 없음 (고정 크기 유지)
                         if st.button(display_label, key=f"btn_cell_{i}_{j}"): 
                             if is_currently_selected:
-                                st.session_state.selected_cell = None # 이미 선택된 셀을 다시 클릭하면 선택 해제
+                                st.session_state.selected_cell = None 
                             else:
-                                st.session_state.selected_cell = (i,j) # 새로운 셀 선택
+                                st.session_state.selected_cell = (i,j) 
                             st.rerun()
                     else:
-                        # use_container_width=True 없음 (고정 크기 유지)
                         st.button(str(actual_value), key=f"btn_cell_{i}_{j}", disabled=True)
                     
                     st.markdown('</div>', unsafe_allow_html=True)
             
-            with row_cols[3]: # 해당 행의 숫자 합계
+            with row_cols[3]: 
                 row_sum = np.sum(st.session_state.grid[i, :])
                 st.markdown(f'<div class="sum-cell" title="행 {i+1} 합계">합계: {row_sum}</div>', unsafe_allow_html=True)
 
-        # 각 열의 합계 및 대각선 합계 표시
         st.markdown('<div style="margin-top: 5px;"></div>', unsafe_allow_html=True) 
         sum_display_cols = st.columns(4, gap="small")
-        for j_sum_col in range(3): # 열 합계
+        for j_sum_col in range(3): 
             with sum_display_cols[j_sum_col]:
                 col_sum = np.sum(st.session_state.grid[:, j_sum_col])
                 st.markdown(f'<div class="sum-cell" title="열 {j_sum_col+1} 합계">합계: {col_sum}</div>', unsafe_allow_html=True)
-        with sum_display_cols[3]: # 대각선 합계
+        with sum_display_cols[3]: 
             main_diag_sum = np.trace(st.session_state.grid)
             st.markdown(f'<div class="sum-cell" title="대각선 합계 (좌상-우하)">↘ 합계: {main_diag_sum}</div>', unsafe_allow_html=True)
 
@@ -174,7 +170,6 @@ def main():
         st.subheader("숫자판")
         st.markdown('<div class="number-panel-buttons-wrapper">', unsafe_allow_html=True)
         
-        # 3x3 숫자 버튼 그리드
         for r_panel in range(3):
             panel_row_cols = st.columns(3, gap="small") 
             for c_panel in range(3):
@@ -183,20 +178,18 @@ def main():
                     if st.button(str(num_val_panel), key=f"panel_num_{num_val_panel}", use_container_width=True):
                         if st.session_state.selected_cell:
                             r, c = st.session_state.selected_cell
-                            if st.session_state.hidden_mask[r,c]: # 숨겨진 셀에만 입력 가능
+                            if st.session_state.hidden_mask[r,c]: 
                                 st.session_state.user_grid[r,c] = num_val_panel
                                 st.rerun()
         
-        # "지우기" 버튼 (3x3 그리드 아래)
         if st.button("지우기", key="panel_clear_btn", use_container_width=True):
             if st.session_state.selected_cell:
                 r, c = st.session_state.selected_cell
-                if st.session_state.hidden_mask[r,c]: # 숨겨진 셀에만 입력 가능
-                    st.session_state.user_grid[r,c] = 0 # 0은 빈 칸을 의미
+                if st.session_state.hidden_mask[r,c]: 
+                    st.session_state.user_grid[r,c] = 0 
                     st.rerun()
         st.markdown('</div>', unsafe_allow_html=True)
 
-    # 컨트롤 버튼
     st.markdown("---") 
     col1, col2 = st.columns(2)
     with col1:
