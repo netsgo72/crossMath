@@ -3,12 +3,14 @@ import numpy as np
 import random
 
 def initialize_grid():
+    """1부터 9까지의 숫자로 3x3 그리드를 초기화합니다."""
     numbers = list(range(1, 10))
     random.shuffle(numbers)
     grid = np.array(numbers).reshape(3, 3)
     return grid
 
 def hide_numbers(grid, max_visible=4):
+    """그리드의 숫자 중 일부를 숨깁니다."""
     while True:
         hidden_mask = np.ones_like(grid, dtype=bool)
         positions = list(range(grid.size))
@@ -21,83 +23,81 @@ def hide_numbers(grid, max_visible=4):
                 visible_count += 1
             else:
                 break
-
         valid_mask = True
         for i in range(3):
-            if np.sum(~hidden_mask[i, :]) == 3 or np.sum(~hidden_mask[:, i]) == 3:
-                valid_mask = False
-                break
+            if np.sum(~hidden_mask[i, :]) == 3:
+                valid_mask = False; break
+            if np.sum(~hidden_mask[:, i]) == 3:
+                valid_mask = False; break
         if valid_mask:
             return hidden_mask
 
 def main():
-    st.set_page_config(page_title="숫자 채우기 게임", layout="wide")
-    st.title("🔢 숫자 채우기 게임")
+    st.set_page_config(layout="wide")
+    st.title("숫자 채우기 게임")
 
     st.markdown("""
         <style>
-        /* Puzzle grid buttons */
-        .stButton>button {
-            width: 100px;
-            height: 100px;
-            font-size: 120px; /* Increased from 96px to ~3x perceived size */
+        /* 그리드 셀 버튼 (기본) */
+        .grid-cell-wrapper .stButton>button {
+            width: 100px;  /* 고정 너비 */
+            height: 100px; /* 고정 높이 */
+            font-size: 60px; 
+            padding: 0;
             margin: 0px;
-            padding: 0px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            line-height: 1;
+            border: 2px solid #ccc; 
             overflow: hidden;
-            border-width: 2px !important;
-            box-sizing: border-box;
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            line-height: 1; /* Flex 사용 시 line-height는 1 또는 normal */
         }
+
+        /* 활성화된 (선택된) 그리드 셀 버튼 */
+        .grid-cell-wrapper.selected .stButton>button {
+            border: 3px solid RoyalBlue !important; /* 이전 스타일 유지 */
+            background-color: AliceBlue !important; /* 이전 스타일 유지 */
+        }
+        
+        /* 비활성화된 그리드 셀 버튼 (원래 보이는 숫자) */
+        .grid-cell-wrapper .stButton>button:disabled {
+            background-color: #f0f0f0; 
+            color: #555; 
+            border-color: #d0d0d0; 
+        }
+
+        /* 숫자 패널 버튼들을 감싸는 div */
+        .number-panel-buttons-wrapper {
+            padding-top: 5px; /* 숫자판 제목과의 간격 */
+        }
+        
+        /* 숫자 패널의 1-9 숫자 버튼 */
+        .number-panel-buttons-wrapper .stButton[key*="panel_num_"]>button {
+            aspect-ratio: 1 / 1; /* 정사각형 모양 */
+            font-size: 18px; 
+            /* margin-bottom은 st.columns의 gap으로 처리 */
+        }
+        
+        /* 숫자 패널의 "지우기" 버튼 */
+        .number-panel-buttons-wrapper .stButton[key*="panel_clear_btn"]>button {
+            font-size: 16px;
+            height: 40px; 
+            margin-top: 8px; /* 숫자 그리드와의 간격 */
+        }
+
+        /* 합계 셀 스타일 */
         .sum-cell {
             display: flex;
             align-items: center;
             justify-content: center;
-            width: 100px;
-            height: 100px;
-            font-size: 22px;
+            width: 100px; 
+            height: 100px; 
+            font-size: 20px; 
             font-weight: bold;
             padding: 8px;
-            box-sizing: border-box;
-            border: 1px solid #ccc;
-            margin: 0px;
-        }
-        /* Keypad buttons */
-        .keypad-container .stButton>button {
-            width: 80px; /* Elongated horizontally */
-            height: 40px; /* Shorter vertically */
-            font-size: 18px; /* Slightly larger for clarity */
-            margin: 0px; /* No gaps */
-            padding: 0px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            line-height: 1;
-            box-sizing: border-box;
-        }
-        /* Zero gaps in puzzle grid */
-        .puzzle-area .stHorizontalBlock, .puzzle-area [class*="st-"], .puzzle-area [class*="col-"] {
-            gap: 0px !important;
-            margin: 0px !important;
-            padding: 0px !important;
-        }
-        .puzzle-area, .puzzle-area > div {
-            margin: 0px !important;
-            padding: 0px !important;
-            gap: 0px !important;
-        }
-        /* Zero gaps in keypad */
-        .keypad-container .stHorizontalBlock, .keypad-container [class*="st-"], .keypad-container [class*="col-"] {
-            gap: 0px !important;
-            margin: 0px !important;
-            padding: 0px !important;
-        }
-        .keypad-container, .keypad-container > div {
-            margin: 0px !important;
-            padding: 0px !important;
-            gap: 0px !important;
+            box-sizing: border-box; 
+            border: 1px solid #eee; 
+            background-color: #f9f9f9; 
         }
         </style>
     """, unsafe_allow_html=True)
@@ -109,110 +109,97 @@ def main():
     if 'selected_cell' not in st.session_state:
         st.session_state.selected_cell = None
 
-    left_col, right_col = st.columns([2, 1])
+    grid_area, panel_area = st.columns([3, 0.9]) # 비율 조정 (패널이 너무 좁지 않도록)
 
-    with left_col:
-        st.markdown("### 퍼즐")
-        st.markdown('<div class="puzzle-area">', unsafe_allow_html=True)
-
+    with grid_area:
         for i in range(3):
-            # Inline style to reinforce zero gap
-            st.markdown('<div style="display: flex; gap: 0px; margin: 0px; padding: 0px;">', unsafe_allow_html=True)
-            cols = st.columns(4, gap="small")
+            row_cols = st.columns(4, gap="small") 
             for j in range(3):
-                with cols[j]:
-                    st.markdown('<div style="margin: 0px; padding: 0px;">', unsafe_allow_html=True)
-                    is_hidden = st.session_state.hidden_mask[i, j]
-                    actual_val = st.session_state.grid[i, j]
-                    user_val = st.session_state.user_grid[i, j]
+                with row_cols[j]:
+                    is_hidden_cell = st.session_state.hidden_mask[i, j]
+                    actual_value = st.session_state.grid[i, j]
+                    user_value = st.session_state.user_grid[i, j]
+                    is_currently_selected = (st.session_state.selected_cell == (i,j))
 
-                    if is_hidden:
-                        display_val = str(user_val) if user_val != 0 else " "
-                        if st.session_state.selected_cell == (i, j):
-                            st.button(f"[{display_val}]", key=f"selected_{i}_{j}_indicator", help="선택된 셀", disabled=True)
-                        else:
-                            if st.button(display_val, key=f"hidden_{i}_{j}"):
-                                st.session_state.selected_cell = (i, j)
-                                st.rerun()
-                                return
-                    else:
-                        st.button(str(actual_val), key=f"visible_{i}_{j}", disabled=True)
-                    st.markdown('</div>', unsafe_allow_html=True)
-            with cols[3]:
-                st.markdown(f'<div class="sum-cell">합계: {np.sum(st.session_state.grid[i, :])}</div>', unsafe_allow_html=True)
-            st.markdown('</div>', unsafe_allow_html=True)
-
-        st.markdown('<div style="margin-top: 0px;"></div>', unsafe_allow_html=True)
-
-        sum_cols_display = st.columns(4, gap="small")
-        for j in range(3):
-            with sum_cols_display[j]:
-                st.markdown(f'<div class="sum-cell">합계: {np.sum(st.session_state.grid[:, j])}</div>', unsafe_allow_html=True)
-        with sum_cols_display[3]:
-            st.markdown('<div class="sum-cell" style="visibility: hidden;"></div>', unsafe_allow_html=True)
-
-        st.markdown('</div>', unsafe_allow_html=True)
-
-    with right_col:
-        st.markdown("### 숫자 입력")
-        st.markdown('<div class="keypad-container">', unsafe_allow_html=True)
-
-        keypad_layout_rows = [st.columns(3, gap="small") for _ in range(3)]
-        current_num = 1
-        for row_of_cols in keypad_layout_rows:
-            st.markdown('<div style="display: flex; gap: 0px; margin: 0px; padding: 0px;">', unsafe_allow_html=True)
-            for col_object in row_of_cols:
-                with col_object:
-                    st.markdown('<div style="margin: 0px; padding: 0px;">', unsafe_allow_html=True)
-                    is_disabled = st.session_state.selected_cell is None
-                    if st.button(str(current_num), key=f"keypad_{current_num}", disabled=is_disabled):
-                        if not is_disabled:
-                            r_selected, c_selected = st.session_state.selected_cell
-                            st.session_state.user_grid[r_selected, c_selected] = current_num
-                            st.session_state.selected_cell = None
+                    wrapper_class = "grid-cell-wrapper"
+                    if is_currently_selected and is_hidden_cell:
+                        wrapper_class += " selected"
+                    
+                    st.markdown(f'<div class="{wrapper_class}">', unsafe_allow_html=True)
+                    
+                    if is_hidden_cell:
+                        display_label = str(user_value) if user_value != 0 else " "
+                        # use_container_width=True 제거하여 버튼 크기 고정
+                        if st.button(display_label, key=f"btn_cell_{i}_{j}"): 
+                            if is_currently_selected:
+                                st.session_state.selected_cell = None 
+                            else:
+                                st.session_state.selected_cell = (i,j)
                             st.rerun()
-                            return
+                    else:
+                        # use_container_width=True 제거
+                        st.button(str(actual_value), key=f"btn_cell_{i}_{j}", disabled=True)
+                    
                     st.markdown('</div>', unsafe_allow_html=True)
-                current_num += 1
-            st.markdown('</div>', unsafe_allow_html=True)
+            
+            with row_cols[3]: 
+                row_sum = np.sum(st.session_state.grid[i, :])
+                st.markdown(f'<div class="sum-cell" title="행 {i+1} 합계">합계: {row_sum}</div>', unsafe_allow_html=True)
+
+        st.markdown('<div style="margin-top: 5px;"></div>', unsafe_allow_html=True) 
+        sum_display_cols = st.columns(4, gap="small")
+        for j_sum_col in range(3):
+            with sum_display_cols[j_sum_col]:
+                col_sum = np.sum(st.session_state.grid[:, j_sum_col])
+                st.markdown(f'<div class="sum-cell" title="열 {j_sum_col+1} 합계">합계: {col_sum}</div>', unsafe_allow_html=True)
+        with sum_display_cols[3]:
+            main_diag_sum = np.trace(st.session_state.grid)
+            st.markdown(f'<div class="sum-cell" title="대각선 합계 (좌상-우하)">↘ 합계: {main_diag_sum}</div>', unsafe_allow_html=True)
+
+    with panel_area:
+        st.subheader("숫자판")
+        st.markdown('<div class="number-panel-buttons-wrapper">', unsafe_allow_html=True)
+        
+        # 3x3 숫자 버튼 그리드
+        for r_panel in range(3):
+            panel_row_cols = st.columns(3, gap="small") # 패널 내부 컬럼 간격 조정
+            for c_panel in range(3):
+                num_val_panel = r_panel * 3 + c_panel + 1
+                with panel_row_cols[c_panel]:
+                    if st.button(str(num_val_panel), key=f"panel_num_{num_val_panel}", use_container_width=True):
+                        if st.session_state.selected_cell:
+                            r, c = st.session_state.selected_cell
+                            if st.session_state.hidden_mask[r,c]:
+                                st.session_state.user_grid[r,c] = num_val_panel
+                                st.rerun()
+        
+        # "지우기" 버튼 (3x3 그리드 아래)
+        if st.button("지우기", key="panel_clear_btn", use_container_width=True):
+            if st.session_state.selected_cell:
+                r, c = st.session_state.selected_cell
+                if st.session_state.hidden_mask[r,c]:
+                    st.session_state.user_grid[r,c] = 0
+                    st.rerun()
         st.markdown('</div>', unsafe_allow_html=True)
 
-    st.markdown("---")
-
-    col1_action, col2_action = st.columns(2)
-    with col1_action:
+    st.markdown("---") 
+    col1, col2 = st.columns(2)
+    with col1:
         if st.button("정답 확인", use_container_width=True):
-            num_incorrectly_filled_hidden_cells = 0
-            num_empty_hidden_cells = 0
-            any_hidden_cell_exists = False
-
+            all_correct = True; is_empty_exists = False
             for r_idx in range(3):
                 for c_idx in range(3):
-                    if st.session_state.hidden_mask[r_idx, c_idx]:
-                        any_hidden_cell_exists = True
-                        user_value = st.session_state.user_grid[r_idx, c_idx]
-                        actual_value = st.session_state.grid[r_idx, c_idx]
-
-                        if user_value != 0:
-                            if user_value != actual_value:
-                                num_incorrectly_filled_hidden_cells += 1
-                        else:
-                            num_empty_hidden_cells += 1
-
-            if not any_hidden_cell_exists:
-                st.info("💡 모든 숫자가 이미 공개되어 있습니다!")
-            elif num_incorrectly_filled_hidden_cells > 0:
-                st.error("❌ 일부 숫자가 정답과 다릅니다. 다시 확인해주세요!")
-            elif num_empty_hidden_cells > 0:
-                st.warning("⚠️ 모든 빈칸을 채워주세요! 현재까지 입력한 값은 정답입니다.")
-            else:
-                st.success("🎉 축하합니다! 모든 숫자를 정확히 맞혔습니다!")
-
-    with col2_action:
+                    if st.session_state.hidden_mask[r_idx, c_idx]: 
+                        if st.session_state.user_grid[r_idx, c_idx] == 0: is_empty_exists = True
+                        if st.session_state.user_grid[r_idx, c_idx] != st.session_state.grid[r_idx, c_idx]: all_correct = False
+            if not all_correct: st.error("일부 숫자가 정답과 다릅니다. 다시 확인해주세요!")
+            elif is_empty_exists and all_correct: st.warning("모든 빈칸을 채워주세요! 현재까지 입력한 값은 정답입니다.")
+            else: st.success("축하합니다! 모든 숫자를 정확히 맞혔습니다!")
+    with col2:
         if st.button("새 게임 시작", use_container_width=True):
-            for key_to_clear in ['grid', 'hidden_mask', 'user_grid', 'selected_cell']:
-                if key_to_clear in st.session_state:
-                    del st.session_state[key_to_clear]
+            keys_to_reset = ['grid', 'hidden_mask', 'user_grid', 'selected_cell']
+            for key in keys_to_reset:
+                if key in st.session_state: del st.session_state[key]
             st.rerun()
 
 if __name__ == "__main__":
