@@ -24,7 +24,7 @@ def hide_numbers(grid, max_visible=4):
 
         valid_mask = True
         for i in range(3):
-            if np.sum(~hidden_mask[i, :]) == 3 or np.sum(~hidden_mask[:, i]) == 3: 
+            if np.sum(~hidden_mask[i, :]) == 3 or np.sum(~hidden_mask[:, i]) == 3:
                 valid_mask = False
                 break
         if valid_mask:
@@ -78,13 +78,24 @@ def main():
             box-sizing: border-box;
         }
         /* Minimize gap between columns in the puzzle area */
-        .puzzle-area .stHorizontalBlock {
+        .puzzle-area .stHorizontalBlock, .puzzle-area [class*="st-"] {
+            gap: 0px !important;
+            margin: 0px !important;
+            padding: 0px !important;
+        }
+        /* Ensure puzzle area and its children have no extra spacing */
+        .puzzle-area, .puzzle-area > div {
+            margin: 0px !important;
+            padding: 0px !important;
+            display: flex;
+            flex-wrap: wrap;
             gap: 0px !important;
         }
-        /* Ensure no additional spacing in puzzle area */
-        .puzzle-area {
-            margin: 0;
-            padding: 0;
+        /* Target Streamlit column containers directly */
+        .puzzle-area [class*="col-"], .puzzle-area [class*="stColumn"] {
+            margin: 0px !important;
+            padding: 0px !important;
+            gap: 0px !important;
         }
         </style>
     """, unsafe_allow_html=True)
@@ -96,15 +107,16 @@ def main():
     if 'selected_cell' not in st.session_state:
         st.session_state.selected_cell = None
 
-    left_col, right_col = st.columns([2, 1]) 
+    left_col, right_col = st.columns([2, 1])
 
     with left_col:
         st.markdown("### 퍼즐")
         st.markdown('<div class="puzzle-area">', unsafe_allow_html=True)
 
-        for i in range(3): 
-            cols = st.columns(4, gap="small")  # Use small gap as fallback, overridden by CSS
-            for j in range(3): 
+        for i in range(3):
+            # Use inline style as fallback for zero gap
+            cols = st.columns(4, gap="small")
+            for j in range(3):
                 with cols[j]:
                     is_hidden = st.session_state.hidden_mask[i, j]
                     actual_val = st.session_state.grid[i, j]
@@ -118,20 +130,20 @@ def main():
                             if st.button(display_val, key=f"hidden_{i}_{j}"):
                                 st.session_state.selected_cell = (i, j)
                                 st.rerun()
-                                return 
-                    else: 
+                                return
+                    else:
                         st.button(str(actual_val), key=f"visible_{i}_{j}", disabled=True)
-            
-            with cols[3]: 
+
+            with cols[3]:
                 st.markdown(f'<div class="sum-cell">합계: {np.sum(st.session_state.grid[i, :])}</div>', unsafe_allow_html=True)
 
         st.markdown('<div style="margin-top: 0px;"></div>', unsafe_allow_html=True)
 
-        sum_cols_display = st.columns(4, gap="small")  # Use small gap as fallback, overridden by CSS
+        sum_cols_display = st.columns(4, gap="small")
         for j in range(3):
             with sum_cols_display[j]:
                 st.markdown(f'<div class="sum-cell">합계: {np.sum(st.session_state.grid[:, j])}</div>', unsafe_allow_html=True)
-        with sum_cols_display[3]: 
+        with sum_cols_display[3]:
             st.markdown('<div class="sum-cell" style="visibility: hidden;"></div>', unsafe_allow_html=True)
 
         st.markdown('</div>', unsafe_allow_html=True)
@@ -139,7 +151,7 @@ def main():
     with right_col:
         st.markdown("### 숫자 입력")
         st.markdown('<div class="keypad-container">', unsafe_allow_html=True)
-        
+
         keypad_layout_rows = [st.columns(3) for _ in range(3)]
         current_num = 1
         for row_of_cols in keypad_layout_rows:
@@ -167,24 +179,24 @@ def main():
 
             for r_idx in range(3):
                 for c_idx in range(3):
-                    if st.session_state.hidden_mask[r_idx, c_idx]: 
+                    if st.session_state.hidden_mask[r_idx, c_idx]:
                         any_hidden_cell_exists = True
                         user_value = st.session_state.user_grid[r_idx, c_idx]
                         actual_value = st.session_state.grid[r_idx, c_idx]
 
-                        if user_value != 0: 
+                        if user_value != 0:
                             if user_value != actual_value:
                                 num_incorrectly_filled_hidden_cells += 1
-                        else: 
+                        else:
                             num_empty_hidden_cells += 1
-            
+
             if not any_hidden_cell_exists:
-                 st.info("💡 모든 숫자가 이미 공개되어 있습니다!")
+                st.info("💡 모든 숫자가 이미 공개되어 있습니다!")
             elif num_incorrectly_filled_hidden_cells > 0:
                 st.error("❌ 일부 숫자가 정답과 다릅니다. 다시 확인해주세요!")
-            elif num_empty_hidden_cells > 0 : 
+            elif num_empty_hidden_cells > 0:
                 st.warning("⚠️ 모든 빈칸을 채워주세요! 현재까지 입력한 값은 정답입니다.")
-            else: 
+            else:
                 st.success("🎉 축하합니다! 모든 숫자를 정확히 맞혔습니다!")
 
     with col2_action:
