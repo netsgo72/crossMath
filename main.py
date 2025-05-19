@@ -48,14 +48,15 @@ def main():
 
     st.markdown("""
         <style>
-        /* 그리드 셀 버튼 (크기 및 폰트 조정) */
+        /* 그리드 셀 버튼 (합계 셀과 크기 일치하도록 수정) */
         .grid-cell-wrapper .stButton>button {
-            width: 100px;  /* 너비 100px 유지 */
-            height: 100px; /* 높이 100px 유지 */
-            font-size: 50px; /* 폰트 크기를 키워 숫자 가시성 향상 (기존 32px -> 50px) */
-            padding: 0;
-            margin: 1px; /* 새 참조 코드 기준 마진 적용 */
-            border: 1px solid #ccc; 
+            width: 100px;           /* 합계 셀과 동일 */
+            height: 100px;          /* 합계 셀과 동일 */
+            font-size: 40px;        /* 내부 공간(패딩 적용 후) 고려하여 폰트 조정 */
+            padding: 8px;           /* 합계 셀과 동일한 패딩 적용 */
+            margin: 0px;            /* 버튼 자체 마진 제거, st.columns의 gap으로 간격 조절 */
+            border: 1px solid #ccc; /* 그리드 셀 고유 테두리 유지 */
+            box-sizing: border-box; /* 합계 셀과 동일하게 border-box 적용 (매우 중요!) */
             overflow: hidden; 
             display: flex; 
             align-items: center; 
@@ -63,7 +64,7 @@ def main():
             line-height: 1; 
         }
 
-        /* 활성화된 (선택된) 그리드 셀 버튼 (이전 기능 유지) */
+        /* 활성화된 (선택된) 그리드 셀 버튼 */
         .grid-cell-wrapper.selected .stButton>button {
             border: 3px solid RoyalBlue !important; 
             background-color: AliceBlue !important;
@@ -94,7 +95,7 @@ def main():
             margin-top: 8px; 
         }
 
-        /* 합계 셀 스타일 (변경 없음) */
+        /* 합계 셀 스타일 (이 스타일을 그리드 셀 크기의 기준으로 사용) */
         .sum-cell {
             display: flex;
             align-items: center;
@@ -103,15 +104,15 @@ def main():
             height: 100px; 
             font-size: 20px; 
             font-weight: bold;
-            padding: 8px;
-            box-sizing: border-box; 
+            padding: 8px; /* 내부 여백 */
+            box-sizing: border-box; /* 테두리와 패딩을 포함하여 크기 계산 */
             border: 1px solid #eee; 
             background-color: #f9f9f9; 
         }
         </style>
     """, unsafe_allow_html=True)
 
-    # 세션 상태 초기화
+    # 세션 상태 초기화 (이하 Python 코드는 변경 없음)
     if 'grid' not in st.session_state:
         st.session_state.grid = initialize_grid()
         st.session_state.hidden_mask = hide_numbers(st.session_state.grid, max_visible=4)
@@ -119,15 +120,13 @@ def main():
     if 'selected_cell' not in st.session_state:
         st.session_state.selected_cell = None
 
-    # 메인 레이아웃: 좌측 그리드 영역 | 우측 숫자 패널
     grid_area, panel_area = st.columns([3, 0.9]) 
 
     with grid_area:
-        # 3x3 그리드와 각 행의 합계 표시
         for i in range(3):
             row_cols = st.columns(4, gap="small") 
             for j in range(3):
-                with row_cols[j]: # 각 그리드 셀
+                with row_cols[j]: 
                     is_hidden_cell = st.session_state.hidden_mask[i, j]
                     actual_value = st.session_state.grid[i, j]
                     user_value = st.session_state.user_grid[i, j]
