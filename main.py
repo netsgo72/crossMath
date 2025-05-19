@@ -60,15 +60,14 @@ def main():
     if 'pending_value' not in st.session_state:
         st.session_state.pending_value = None
 
-    rerun_flag = False
-
     # 드롭다운에서 값이 선택된 경우, 그 값을 반영
     if st.session_state.pending_value is not None and st.session_state.selected_cell is not None:
         i, j = st.session_state.selected_cell
         st.session_state.user_grid[i, j] = st.session_state.pending_value
         st.session_state.selected_cell = None
         st.session_state.pending_value = None
-        rerun_flag = True
+        st.experimental_rerun()
+        return
 
     # 3x3 그리드와 합계 표시
     for i in range(3):
@@ -87,12 +86,14 @@ def main():
                         )
                         if selected != "" and (cell_value == 0 or int(selected) != cell_value):
                             st.session_state.pending_value = int(selected)
-                            rerun_flag = True
+                            st.experimental_rerun()
+                            return
                     else:
                         label = "" if cell_value == 0 else str(cell_value)
                         if st.button(label, key=f"btn_{i}_{j}"):
                             st.session_state.selected_cell = (i, j)
-                            rerun_flag = True
+                            st.experimental_rerun()
+                            return
                 else:
                     st.button(str(st.session_state.grid[i, j]), key=f"btn_visible_{i}_{j}", disabled=True)
         with cols[3]:
@@ -122,11 +123,8 @@ def main():
         st.session_state.user_grid = np.zeros_like(st.session_state.grid)
         st.session_state.selected_cell = None
         st.session_state.pending_value = None
-        rerun_flag = True
-
-    # rerun은 마지막에 한 번만!
-    if rerun_flag:
         st.experimental_rerun()
+        return
 
 if __name__ == "__main__":
     main()
