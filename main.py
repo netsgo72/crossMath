@@ -143,4 +143,59 @@ def main():
                 st.markdown(f'<div class="sum-cell" title="열 {j_sum_col+1} 합계">합계: {col_sum}</div>', unsafe_allow_html=True)
         with sum_display_cols[3]: 
             main_diag_sum = np.trace(st.session_state.grid)
-            st.markdown(f'<div class="sum-cell" title="대각선 합계 (좌상-우
+            st.markdown(f'<div class="sum-cell" title="대각선 합계 (좌상-우하)">↘ 합계: {main_diag_sum}</div>', unsafe_allow_html=True)
+
+    with panel_area:
+        st.subheader("숫자판")
+        st.markdown('<div class="number-panel-buttons-wrapper">', unsafe_allow_html=True)
+        
+        for r_panel in range(3):
+            panel_row_cols = st.columns(3, gap="small") 
+            for c_panel in range(3):
+                num_val_panel = r_panel * 3 + c_panel + 1
+                with panel_row_cols[c_panel]:
+                    if st.button(str(num_val_panel), key=f"panel_num_{num_val_panel}", use_container_width=True):
+                        if st.session_state.selected_cell:
+                            r, c = st.session_state.selected_cell
+                            if st.session_state.hidden_mask[r,c]: 
+                                st.session_state.user_grid[r,c] = num_val_panel
+                                st.rerun()
+        
+        if st.button("지우기", key="panel_clear_btn", use_container_width=True):
+            if st.session_state.selected_cell:
+                r, c = st.session_state.selected_cell
+                if st.session_state.hidden_mask[r,c]: 
+                    st.session_state.user_grid[r,c] = 0 
+                    st.rerun()
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    st.markdown("---") 
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("정답 확인", use_container_width=True):
+            all_correct = True
+            is_empty_exists = False
+            for r_idx in range(3):
+                for c_idx in range(3):
+                    if st.session_state.hidden_mask[r_idx, c_idx]: 
+                        if st.session_state.user_grid[r_idx, c_idx] == 0: 
+                            is_empty_exists = True
+                        if st.session_state.user_grid[r_idx, c_idx] != st.session_state.grid[r_idx, c_idx]:
+                            all_correct = False
+            
+            if not all_correct:
+                st.error("일부 숫자가 정답과 다릅니다. 다시 확인해주세요!")
+            elif is_empty_exists and all_correct : 
+                 st.warning("모든 빈칸을 채워주세요! 현재까지 입력한 값은 정답입니다.")
+            else: 
+                 st.success("축하합니다! 모든 숫자를 정확히 맞혔습니다!")
+    with col2:
+        if st.button("새 게임 시작", use_container_width=True):
+            keys_to_reset = ['grid', 'hidden_mask', 'user_grid', 'selected_cell']
+            for key in keys_to_reset:
+                if key in st.session_state:
+                    del st.session_state[key]
+            st.rerun()
+
+if __name__ == "__main__":
+    main()
