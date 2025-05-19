@@ -47,27 +47,56 @@ def main():
 
     st.markdown("""
         <style>
+        /* 기본 그리드 셀 버튼 스타일 */
         .stButton>button {
             width: 100px;
             height: 100px;
             font-size: 32px;
-            margin: 1px;
+            margin: 0px; /* 간격 최소화 */
             padding: 0;
+            border: 1px solid #ccc; /* 버튼 테두리 */
         }
+
+        /* 숫자 팔레트 컨테이너 */
+        .number-palette-container {
+            padding: 2px; /* 내부 여백 */
+            box-sizing: border-box;
+        }
+
+        /* 팔레트 내부 숫자 버튼 (1-9) 스타일 */
+        .number-palette-container .stButton[key*="palette_num"]>button {
+            width: 100%; 
+            aspect-ratio: 1 / 1; /* 정사각형 버튼 */
+            font-size: 14px; 
+            margin: 1px; 
+            padding: 0;
+            min-height: 25px; /* 최소 높이 */
+            border: 1px solid #eee;
+        }
+
+        /* 팔레트 내부 "지우기" 버튼 스타일 */
+        .number-palette-container .stButton[key*="palette_clear"]>button {
+            width: 100%; 
+            height: 28px; 
+            font-size: 13px;
+            margin-top: 2px; 
+            border: 1px solid #ddd;
+        }
+
+        /* 합계 셀 스타일 */
         .sum-cell {
             display: flex;
             align-items: center;
             justify-content: center;
             width: 100px; 
             height: 100px; 
-            font-size: 20px; /* 폰트 크기 약간 줄임 */
+            font-size: 20px; 
             font-weight: bold;
             padding: 8px;
             box-sizing: border-box; 
-            border: 1px solid #eee; /* 셀 구분선 추가 */
-            background-color: #f9f9f9; /* 배경색 약간 추가 */
+            border: 1px solid #eee; 
+            background-color: #f9f9f9; 
         }
-        /* Streamlit 컬럼 간 기본 간격을 사용하거나, 필요시 CSS로 조정 */
         </style>
     """, unsafe_allow_html=True)
 
@@ -78,78 +107,66 @@ def main():
         st.session_state.user_grid = np.zeros_like(st.session_state.grid, dtype=int)
     if 'selected_cell' not in st.session_state:
         st.session_state.selected_cell = None
-    if 'pending_value' not in st.session_state:
-        st.session_state.pending_value = None
-
-    # 드롭다운에서 값이 선택된 경우, 그 값을 user_grid에 반영하고 상태 초기화
-    if st.session_state.pending_value is not None and st.session_state.selected_cell is not None:
-        r, c = st.session_state.selected_cell
-        st.session_state.user_grid[r, c] = st.session_state.pending_value
-        st.session_state.selected_cell = None
-        st.session_state.pending_value = None
-        st.rerun() 
-        return
+    # pending_value는 더 이상 사용하지 않으므로 초기화 불필요 (또는 제거 가능)
 
     # 3x3 그리드와 각 행의 합계 표시
     for i in range(3):
-        cols = st.columns(4) 
+        # 각 셀과 행 합계 셀을 위한 컬럼 (gap="small" 또는 CSS로 margin 조정)
+        cols = st.columns(4, gap="small") 
         for j in range(3):
-            with cols[j]:
+            with cols[j]: # 각 그리드 셀
                 is_hidden_cell = st.session_state.hidden_mask[i, j]
                 actual_value = st.session_state.grid[i, j]
                 user_value = st.session_state.user_grid[i, j]
 
                 if is_hidden_cell:
                     if st.session_state.selected_cell == (i, j):
-                        options = [""] + [str(n) for n in range(1, 10)]
-                        current_display_value = str(user_value) if user_value != 0 else ""
-                        try:
-                            current_idx = options.index(current_display_value)
-                        except ValueError: 
-                            current_idx = 0
-
-                        selected_str = st.selectbox(
-                            label="숫자 선택",
-                            options=options,
-                            index=current_idx,
-                            key=f"select_{i}_{j}",
-                            label_visibility="collapsed"
-                        )
-                        if selected_str != current_display_value: 
-                            if selected_str == "":
-                                st.session_state.pending_value = 0 
-                            else:
-                                st.session_state.pending_value = int(selected_str)
+                        # 이 셀이 선택된 경우: 숫자 팔레트 표시
+                        st.markdown('<div class="number-palette-container">', unsafe_allow_html=True)
+                        
+                        for r_palette in range(3): # 팔레트의 3 행
+                            palette_cols = st.columns(3, gap="small") # 각 행에 3개의 숫자 버튼
+                            for c_palette in range(3):
+                                num_val = r_palette * 3 + c_palette + 1
+                                with palette_cols[c_palette]:
+                                    if st.button(str(num_val), key=f"palette_num_{i}_{j}_{num_val}", use_container_width=True):
+                                        st.session_state.user_grid[i, j] = num_val
+                                        st.session_state.selected_cell = None
+                                        st.rerun()
+                        
+                        # "지우기" 버튼
+                        if st.button("지우기", key=f"palette_clear_{i}_{j}", use_container_width=True):
+                            st.session_state.user_grid[i, j] = 0 # 0은 빈 칸을 의미
+                            st.session_state.selected_cell = None
                             st.rerun()
-                            return
+                        
+                        st.markdown('</div>', unsafe_allow_html=True)
                     else:
+                        # 숨겨진 셀이고, 선택되지 않은 경우: 현재 사용자 값 또는 빈 버튼 표시
                         display_label = str(user_value) if user_value != 0 else " "
                         if st.button(display_label, key=f"btn_hidden_{i}_{j}"):
                             st.session_state.selected_cell = (i, j)
                             st.rerun()
-                            return
                 else:
+                    # 원래부터 보이는 숫자 (수정 불가)
                     st.button(str(actual_value), key=f"btn_visible_{i}_{j}", disabled=True)
         
-        with cols[3]: 
+        with cols[3]: # 해당 행의 숫자 합계
             row_sum = np.sum(st.session_state.grid[i, :])
             st.markdown(f'<div class="sum-cell" title="행 {i+1} 합계">합계: {row_sum}</div>', unsafe_allow_html=True)
 
     # 각 열의 합계 및 대각선 합계 표시
     st.markdown('<div style="margin-top: 5px;"></div>', unsafe_allow_html=True) 
-    sum_display_cols = st.columns(4)
+    sum_display_cols = st.columns(4, gap="small")
 
-    # 열 합계
-    for j in range(3):
+    for j in range(3): # 열 합계
         with sum_display_cols[j]:
             col_sum = np.sum(st.session_state.grid[:, j])
             st.markdown(f'<div class="sum-cell" title="열 {j+1} 합계">합계: {col_sum}</div>', unsafe_allow_html=True)
 
-    # 대각선 합계 (왼쪽 위에서 오른쪽 아래)
-    with sum_display_cols[3]:
-        main_diag_sum = np.trace(st.session_state.grid) # grid[0,0] + grid[1,1] + grid[2,2]
+    with sum_display_cols[3]: # 대각선 합계 (왼쪽 위에서 오른쪽 아래)
+        main_diag_sum = np.trace(st.session_state.grid)
         st.markdown(f'<div class="sum-cell" title="대각선 합계 (좌상-우하)">↘ 합계: {main_diag_sum}</div>', unsafe_allow_html=True)
-
 
     # 컨트롤 버튼
     st.markdown("---") 
@@ -176,12 +193,12 @@ def main():
 
     with col2:
         if st.button("새 게임 시작", use_container_width=True):
-            keys_to_reset = ['grid', 'hidden_mask', 'user_grid', 'selected_cell', 'pending_value']
+            keys_to_reset = ['grid', 'hidden_mask', 'user_grid', 'selected_cell'] # pending_value 제거
             for key in keys_to_reset:
                 if key in st.session_state:
                     del st.session_state[key]
             st.rerun()
-            return
+            return # 새 게임 시작 시 return 추가하여 안정성 확보
 
 if __name__ == "__main__":
     main()
