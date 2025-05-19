@@ -40,15 +40,16 @@ def main():
         .stButton>button {
             width: 100px;
             height: 100px;
-            font-size: 96px;  /* MODIFIED: 3x previous 32px */
-            margin: 1px;
-            padding: 0;
-            display: flex;         /* For centering content */
-            align-items: center;   /* Vertical centering */
-            justify-content: center;/* Horizontal centering */
-            line-height: 1;        /* Improved text fitting */
-            overflow: hidden;      /* Prevent text spill for very large font */
-            border-width: 2px !important; /* Ensuring border is visible */
+            font-size: 96px;
+            margin: 0px;  /* MODIFIED: Set to 0px to minimize gap */
+            padding: 0px; /* Ensure no internal padding affects spacing */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            line-height: 1;
+            overflow: hidden;
+            border-width: 2px !important; /* Kept existing border */
+            box-sizing: border-box; /* ADDED: Ensures width/height include border and padding */
         }
         .sum-cell {
             display: flex;
@@ -59,25 +60,27 @@ def main():
             font-size: 22px;
             font-weight: bold;
             padding: 8px;
-            box-sizing: border-box;
-            border: 1px solid #ccc; /* Adding a border for sum cells for clarity */
+            box-sizing: border-box; /* Already border-box */
+            border: 1px solid #ccc;
+            margin: 0px; /* Ensure sum cells also have no margin if they are part of tight layout */
         }
         /* Specific style for keypad buttons */
         .keypad-container .stButton>button {
             width: 50px;
             height: 50px;
             font-size: 16px;
-            margin: 1px;
+            margin: 1px; /* Keypad button margin can remain as is, or set to 0 if desired */
             padding: 0;
-            display: flex;         /* For centering content */
-            align-items: center;   /* Vertical centering */
-            justify-content: center;/* Horizontal centering */
+            display: flex;
+            align-items: center;
+            justify-content: center;
             line-height: 1;
+            box-sizing: border-box; /* Good practice for keypad buttons too */
         }
         
-        /* MODIFIED: For reducing gap between columns in the puzzle area */
+        /* For reducing gap between columns in the puzzle area */
         .puzzle-area .stHorizontalBlock {
-            gap: 0px !important; /* Reduces Streamlit column gap. Visual gap will be button margins (1px+1px=2px). */
+            gap: 0px !important; /* Streamlit column gap set to 0 */
         }
         </style>
     """, unsafe_allow_html=True)
@@ -105,10 +108,9 @@ def main():
 
                     if is_hidden:
                         display_val = str(user_val) if user_val != 0 else " "
-                        # Use a slightly different visual cue for selected cell if needed
                         if st.session_state.selected_cell == (i, j):
-                            # This button is primarily for display of selection, not interaction
-                            st.button(f"[{display_val}]", key=f"selected_{i}_{j}_indicator", help="선택된 셀")
+                            # MODIFIED: Disabled this button as it's an indicator
+                            st.button(f"[{display_val}]", key=f"selected_{i}_{j}_indicator", help="선택된 셀", disabled=True)
                         else:
                             if st.button(display_val, key=f"hidden_{i}_{j}"):
                                 st.session_state.selected_cell = (i, j)
@@ -120,14 +122,15 @@ def main():
             with cols[3]: 
                 st.markdown(f'<div class="sum-cell">합계: {np.sum(st.session_state.grid[i, :])}</div>', unsafe_allow_html=True)
 
-        st.markdown('<div style="margin-top: 10px;"></div>', unsafe_allow_html=True) 
+        # This explicit spacer creates a 10px vertical gap. Remove or set to 0 if sums should also touch grid.
+        st.markdown('<div style="margin-top: 0px;"></div>', unsafe_allow_html=True) # MODIFIED for tighter packing
 
         sum_cols_display = st.columns(4) 
         for j in range(3):
             with sum_cols_display[j]:
                 st.markdown(f'<div class="sum-cell">합계: {np.sum(st.session_state.grid[:, j])}</div>', unsafe_allow_html=True)
         with sum_cols_display[3]: 
-            st.write("") 
+            st.markdown('<div class="sum-cell" style="visibility: hidden;"></div>', unsafe_allow_html=True) # Placeholder for alignment
 
         st.markdown('</div>', unsafe_allow_html=True)
 
